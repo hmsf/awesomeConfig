@@ -63,14 +63,14 @@ local layouts =
     awful.layout.suit.tile,
     awful.layout.suit.tile.left,
     awful.layout.suit.tile.bottom,
-    awful.layout.suit.tile.top,
+--    awful.layout.suit.tile.top,
     awful.layout.suit.fair,
     awful.layout.suit.fair.horizontal,
-    awful.layout.suit.spiral,
-    awful.layout.suit.spiral.dwindle,
-    awful.layout.suit.max,
-    awful.layout.suit.max.fullscreen,
-    awful.layout.suit.magnifier
+--    awful.layout.suit.spiral,
+--    awful.layout.suit.spiral.dwindle,
+    awful.layout.suit.max
+--    awful.layout.suit.max.fullscreen,
+--    awful.layout.suit.magnifier
 }
 -- }}}
 
@@ -82,14 +82,33 @@ if beautiful.wallpaper then
 end
 -- }}}
 
--- {{{ Tags
--- Define a tag table which hold all screen tags.
+
+-- TAGS (aka screens)
+-- two options, for single or dual display
 tags = {}
-for s = 1, screen.count() do
-    -- Each screen has its own tag table.
-    tags[s] = awful.tag({ " Main ", " Web ", " Term ", " Code ", " Chat ", " Read ", " Media "}, s, layouts[4])
+if screen.count() == 1 then
+    tags1_1 = {
+               names  = { " web ", " study", " shell ", " coding ", " media ", " music ", " other " },
+               layout = { layouts[1], layouts[1], layouts[3], layouts[3], layouts[1], layouts[1], layouts[1] }
+              }
+              tags[1] = awful.tag(tags1_1.names, 1, tags1_1.layout)
+else
+
+    tags2_1 = {
+               names  = { " web ", " study ", " shell ", " coding ", " media ", " music ", " other " },
+               layout = { layouts[1], layouts[1], layouts[3], layouts[3], layouts[1], layouts[1], layouts[1] }
+              }
+
+    tags2_2 = {
+              names  = { "[code]", "[web]", "[chat]", "[misc]" },
+              layout = { layouts[1], layouts[3], layouts[1], layouts[3] }
+               }
+
+              tags[1] = awful.tag(tags2_1.names, 1, tags2_1.layout)
+              tags[2] = awful.tag(tags2_2.names, 2, tags2_2.layout)
 end
--- }}}
+--- }}}
+
 
 -- Global custom programs
 terminal = "gnome-terminal"
@@ -155,6 +174,28 @@ mytextclock = awful.widget.textclock()
 
 
 
+--{{ Battery Widget }} --
+baticon = wibox.widget.imagebox()
+baticon:set_image(beautiful.baticon)
+
+batwidget = wibox.widget.textbox()
+vicious.register( batwidget, vicious.widgets.bat, '$1$2%', 30, "BAT0" )
+
+
+    
+---{{---| Wifi Signal Widget |-------
+neticon = wibox.widget.imagebox()
+vicious.register(neticon, vicious.widgets.wifi, function(widget, args)
+    local sigstrength = tonumber(args["{link}"])
+    if sigstrength > 69 then
+        neticon:set_image(beautiful.nethigh)
+    elseif sigstrength > 40 and sigstrength < 70 then
+        neticon:set_image(beautiful.netmedium)
+    else
+        neticon:set_image(beautiful.netlow)
+    end
+end, 120, 'wlan0')
+    
 
 -- Create a wibox for each screen and add it
 mywibox = {}
@@ -243,7 +284,12 @@ for s = 1, screen.count() do
     right_layout:add(space)
     right_layout:add(memwidget)
     right_layout:add(space)
+    right_layout:add(baticon)
+    right_layout:add(batwidget)
+    right_layout:add(space)
     right_layout:add(volwidget)
+    right_layout:add(space)
+    right_layout:add(neticon)
     right_layout:add(space)
     right_layout:add(mytextclock)
     right_layout:add(mylayoutbox[s])
