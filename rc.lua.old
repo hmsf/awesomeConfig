@@ -38,15 +38,15 @@ do
 end
 -- }}}
 
+
+
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
-beautiful.init("/usr/share/awesome/themes/default/theme.lua")
+beautiful.init("/home/hugo/.config/awesome/themes/dust/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
-browser = "chromium"
-fileManager = "pcmanfm"
-terminal = "termite"
-editor = os.getenv("EDITOR") or "gvim"
+terminal = "gnome-terminal"
+editor = os.getenv("EDITOR") or "vim"
 editor_cmd = terminal .. " -e " .. editor
 
 -- Default modkey.
@@ -59,16 +59,16 @@ modkey = "Mod4"
 -- Table of layouts to cover with awful.layout.inc, order matters.
 local layouts =
 {
-    awful.layout.suit.tile,
     awful.layout.suit.floating,
+    awful.layout.suit.tile,
     awful.layout.suit.tile.left,
     awful.layout.suit.tile.bottom,
-    awful.layout.suit.tile.top,
+--    awful.layout.suit.tile.top,
     awful.layout.suit.fair,
     awful.layout.suit.fair.horizontal,
 --    awful.layout.suit.spiral,
 --    awful.layout.suit.spiral.dwindle,
---    awful.layout.suit.max,
+    awful.layout.suit.max
 --    awful.layout.suit.max.fullscreen,
 --    awful.layout.suit.magnifier
 }
@@ -82,14 +82,41 @@ if beautiful.wallpaper then
 end
 -- }}}
 
--- {{{ Tags
--- Define a tag table which hold all screen tags.
+
+-- TAGS (aka screens)
+-- two options, for single or dual display
 tags = {}
-for s = 1, screen.count() do
-    -- Each screen has its own tag table.
-    tags[s] = awful.tag({ 1, 2, 3, 4, 5, 6, 7, 8, 9 }, s, layouts[1])
+if screen.count() == 1 then
+    tags1_1 = {
+               names  = { " web ", " study", " shell ", " coding ", " media ", " music ", " other " },
+               layout = { layouts[1], layouts[1], layouts[3], layouts[3], layouts[1], layouts[1], layouts[1] }
+              }
+              tags[1] = awful.tag(tags1_1.names, 1, tags1_1.layout)
+else
+
+    tags2_1 = {
+               names  = { " web ", " study ", " shell ", " coding ", " media ", " music ", " other " },
+               layout = { layouts[1], layouts[1], layouts[3], layouts[3], layouts[1], layouts[1], layouts[1] }
+              }
+
+    tags2_2 = {
+              names  = { "[code]", "[web]", "[chat]", "[misc]" },
+              layout = { layouts[1], layouts[3], layouts[1], layouts[3] }
+               }
+
+              tags[1] = awful.tag(tags2_1.names, 1, tags2_1.layout)
+              tags[2] = awful.tag(tags2_2.names, 2, tags2_2.layout)
 end
--- }}}
+--- }}}
+
+
+-- Global custom programs
+terminal = "gnome-terminal"
+editor = os.getenv("EDITOR") or "gvim"
+editor_cmd = terminal .. " -e " .. editor
+browser = "chromium-browser"
+filemanager = "thunar"
+
 
 -- {{{ Menu
 -- Create a laucher widget and a main menu
@@ -112,25 +139,63 @@ mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon,
 menubar.utils.terminal = terminal -- Set the terminal for applications that require it
 -- }}}
 
+
 -- {{{ Wibox
+-- Widgets
+--
 
--- Initialize widget
-cpuwidget = wibox.widget.textbox()
--- Register widget
-vicious.register(cpuwidget, vicious.widgets.cpu, "| $2% $3% $4% $5% $6% $7% $8% $9% ", 2)
-
--- Initialize widget
-memwidget = wibox.widget.textbox()
--- Register widget
-vicious.register(memwidget, vicious.widgets.mem, "| $1% ", 5)
-
+space = wibox.widget.textbox("  ")
+separator = wibox.widget.textbox("  |  ")
 
 -- Create a textclock widget
 mytextclock = awful.widget.textclock()
 
 
 
+-- memory widget
+	memwidget = wibox.widget.textbox()
+	vicious.register(memwidget, vicious.widgets.mem, "ram:$1%", 10)
 
+
+-- cpu usage widget	
+	cpuwidget = wibox.widget.textbox()
+	vicious.register(cpuwidget, vicious.widgets.cpu, "cpu:$1%$2%")
+
+
+-- Cpu temp widget
+	tempwidget = wibox.widget.textbox()
+	vicious.register(tempwidget, vicious.widgets.thermal,"temp:$1°C", 20, { "coretemp.0", "core"} )
+
+
+
+-- Volume Widget
+	volwidget = wibox.widget.textbox()
+	vicious.register(volwidget, vicious.widgets.volume, "$2$1%", 1, "Master")
+
+
+
+--{{ Battery Widget }} --
+baticon = wibox.widget.imagebox()
+baticon:set_image(beautiful.baticon)
+
+batwidget = wibox.widget.textbox()
+vicious.register( batwidget, vicious.widgets.bat, '$1$2%', 30, "BAT0" )
+
+
+    
+---{{---| Wifi Signal Widget |-------
+neticon = wibox.widget.imagebox()
+vicious.register(neticon, vicious.widgets.wifi, function(widget, args)
+    local sigstrength = tonumber(args["{link}"])
+    if sigstrength > 69 then
+        neticon:set_image(beautiful.nethigh)
+    elseif sigstrength > 40 and sigstrength < 70 then
+        neticon:set_image(beautiful.netmedium)
+    else
+        neticon:set_image(beautiful.netlow)
+    end
+end, 120, 'wlan0')
+    
 
 -- Create a wibox for each screen and add it
 mywibox = {}
@@ -172,7 +237,7 @@ mytasklist.buttons = awful.util.table.join(
                                                       theme = { width = 250 }
                                                   })
                                               end
-                                          end),
+                                         end),
                      awful.button({ }, 4, function ()
                                               awful.client.focus.byidx(1)
                                               if client.focus then client.focus:raise() end
@@ -204,27 +269,43 @@ for s = 1, screen.count() do
 
     -- Widgets that are aligned to the left
     local left_layout = wibox.layout.fixed.horizontal()
-    left_layout:add(mylauncher)
+--    left_layout:add(mylauncher)
     left_layout:add(mytaglist[s])
     left_layout:add(mypromptbox[s])
 
     -- Widgets that are aligned to the right
     local right_layout = wibox.layout.fixed.horizontal()
     if s == 1 then right_layout:add(wibox.widget.systray()) end
+    right_layout:add(space)
+    right_layout:add(space)
+    right_layout:add(tempwidget)
+    right_layout:add(space)
     right_layout:add(cpuwidget)
+    right_layout:add(space)
     right_layout:add(memwidget)
+    right_layout:add(space)
+    right_layout:add(baticon)
+    right_layout:add(batwidget)
+    right_layout:add(space)
+    right_layout:add(volwidget)
+    right_layout:add(space)
+    right_layout:add(neticon)
+    right_layout:add(space)
     right_layout:add(mytextclock)
     right_layout:add(mylayoutbox[s])
 
     -- Now bring it all together (with the tasklist in the middle)
     local layout = wibox.layout.align.horizontal()
     layout:set_left(left_layout)
-   -- layout:set_middle(mytasklist[s])
+--    layout:set_middle(mytasklist[s])
     layout:set_right(right_layout)
 
     mywibox[s]:set_widget(layout)
 end
 -- }}}
+
+
+
 
 -- {{{ Mouse bindings
 root.buttons(awful.util.table.join(
@@ -250,7 +331,6 @@ globalkeys = awful.util.table.join(
             awful.client.focus.byidx(-1)
             if client.focus then client.focus:raise() end
         end),
-   -- awful.key({ modkey,           }, "w", function () mymainmenu:show() end),
 
     -- Layout manipulation
     awful.key({ modkey, "Shift"   }, "j", function () awful.client.swap.byidx(  1)    end),
@@ -267,9 +347,18 @@ globalkeys = awful.util.table.join(
         end),
 
 
-    -- my binds
+	--my binds
+	awful.key({ }, "XF86AudioRaiseVolume", function ()
+       awful.util.spawn("amixer set Master 9%+") end),
+   	awful.key({ }, "XF86AudioLowerVolume", function ()
+       awful.util.spawn("amixer set Master 9%-") end),
+  	 awful.key({ }, "XF86AudioMute", function ()
+       awful.util.spawn("amixer -q -D default sset Master toggle") end),
+
+	awful.key({ modkey, "Shift", "Control"}, "l", function () awful.util.spawn("gnome-screensaver-command --lock") end),
+
     awful.key({ modkey,           }, "w", function () awful.util.spawn(browser) end),
-    awful.key({ modkey,           }, "f", function () awful.util.spawn(fileManager) end),
+    awful.key({ modkey,           }, "f", function () awful.util.spawn(filemanager) end),
     awful.key({ modkey,           }, "e", function () awful.util.spawn(editor) end),
     
 
@@ -277,13 +366,11 @@ globalkeys = awful.util.table.join(
     awful.key({ }, "Print", function () awful.util.spawn("scrot -e 'mv $f /home/hugo/Pictures/Screenshots/ 2>/dev/null'") end),
 
 	--Drop-down
-    awful.key ( { modkey }, "`", function() scratch.drop ("termite" , "bottom", "center", 1, 0.25, true ) end ),
+    awful.key ( { modkey }, "`", function() scratch.drop ( "gnome-terminal", "bottom", "center", 1, 0.25, true ) end ),
     
 
-
-
     -- Standard program
-    awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
+    awful.key({ modkey,           }, "t", function () awful.util.spawn(terminal) end),
     awful.key({ modkey, "Control" }, "r", awesome.restart),
     awful.key({ modkey, "Shift"   }, "q", awesome.quit),
 
@@ -313,7 +400,7 @@ globalkeys = awful.util.table.join(
 )
 
 clientkeys = awful.util.table.join(
-    awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
+    awful.key({ modkey, "Shift"   }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
     awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
